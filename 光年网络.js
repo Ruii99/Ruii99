@@ -1,4 +1,3 @@
-#SUBSCRIBED https://raw.githubusercontent.com/xiamubaby/xiamucloud/refs/heads/main/Cloud.js
 # 机场订阅，名称不能重复
 proxy-providers:
   Airport_01:
