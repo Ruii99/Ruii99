@@ -9,7 +9,7 @@ proxy-providers:
       timeout: 5000
       interval: 300
     proxy: 🎯 全球直连
-    url: https://5.restpluan.com/link/9bfF2y5BWavC9Sl9?clash=1
+    url: https://config.moe/config/55d1ca69dc9f13fde122528140be13f6
 
 # 用于下载订阅时指定UA
 global-ua: clash
