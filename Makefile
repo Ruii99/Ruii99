@@ -37,7 +37,7 @@ export DEBUG = 0
 # ██████████████████████████████████████████████████████████████████
 # 修改点 1: 修改注入进程名
 # 将这里的 "Aweme" 改成你要加速的游戏进程名 (比如 "WeChat", "PUBG", 或者你的游戏名)
-INSTALL_TARGET_PROCESSES = Aweme 
+INSTALL_TARGET_PROCESSES = zmxy 
 # ██████████████████████████████████████████████████████████████████
 
 # --- Theos 模块包含 ---
@@ -54,15 +54,15 @@ xiamu_FILES = Tweak.xm
 
 # 修改点 4: 链接必要的框架
 # 加速通常需要操作音频（静音）和基础 UI，这里保留了你的配置并增加了 UIKit/Foundation
-xiamu_LDFLAGS = -weak_framework AVFAudio
-xiamu_FRAMEWORKS = CoreAudio UIKit Foundation OpenGLES QuartzCore
+Tweak_LDFLAGS = -weak_framework AVFAudio
+Tweak_FRAMEWORKS = CoreAudio UIKit Foundation OpenGLES QuartzCore
 
 # C++ 标准 (保持不变)
 CXXFLAGS += -std=c++11
 CCFLAGS += -std=c++11
 
 # Logos 配置
-xiamu_LOGOS_DEFAULT_GENERATOR = internal
+Tweak_LOGOS_DEFAULT_GENERATOR = internal
 # ██████████████████████████████████████████████████████████████████
 
 export THEOS_STRICT_LOGOS=0
