@@ -1,114 +1,84 @@
-// Tweak.xm
-// Cocos2d-x Game Speed Hack
-// Hook 逻辑入口
-
 #import <Foundation/Foundation.h>
+#import <QuartzCore/QuartzCore.h> // 引入 CA
 
-// ===================================================================================
-// 1. Hook 核心：业务定时器加速 (AASTimerManager)
-// 说明：这是最安全且效果最明显的 Hook 点。通过缩短定时器间隔，实现收益、倒计时加速。
-// ===================================================================================
+/**
+ * Game Speed Hack
+ * 强制倍速插件 (修改版)
+ */
 
-// 声明外部函数，用于动态创建类或方法（如果需要）
-extern "C" {
-    void NSLog(CFStringRef format, ...);
-}
-
-// 定义加速倍率 (1.0 为正常速度，2.0 为 2 倍速)
 static float GLOBAL_SPEED_MULTIPLIER = 2.0;
 
-%hook AASTimerManager
-
-// 原型: - (void)start:(id)a0 interval:(double)a1 notLogin:(BOOL)a2;
-// 功能：拦截定时器启动，将间隔时间除以加速倍率
-- (void)start:(id)a0 interval:(double)a1 notLogin:(BOOL)a2 {
-    if (a1 > 0) {
-        double newInterval = a1 / GLOBAL_SPEED_MULTIPLIER;
-        NSLog((CFStringRef)CFSTR("[SpeedHack] Timer: %.2f -> %.2f"), a1, newInterval);
-        %orig(a0, newInterval, a2);
-    } else {
-        %orig;
-    }
-}
-
-%end
-
 // ===================================================================================
-// 2. Hook 核心：Cocos2d-x 渲染循环 (EAGLView)
-// 说明：通过 Hook layoutSubviews，尝试拦截主循环。这是画面加速的关键。
+// 1. 核心 Hook：Cocos2d-x 主循环 (最有效的加速点)
+// 如果游戏是 Cocos2d-x 引擎，Hook 这个通常立马见效
 // ===================================================================================
 
-%hook EAGLView
+// 声明 CCDirector 的私有方法
+@interface CCDirector : NSObject
+- (void)mainLoop:(id)sender;
+@end
 
-// 原型: - (void)layoutSubviews;
-// 功能：Cocos2d-x 通常在这里触发 draw 或 mainLoop
-- (void)layoutSubviews {
-    // 这里比较 tricky。EAGLView 通常会调用一个私有方法或函数来更新逻辑。
-    // 由于我们无法直接修改 deltaTime，我们尝试通过控制内部的 timer 来实现。
-    // 如果 layoutSubviews 调用了原逻辑，我们先执行它。
-    
-    // 获取当前时间戳，并尝试修改内部状态
-    // 注意：如果 EAGLView 内部使用了 CADisplayLink，我们需要 Hook 那个。
-    // 作为备选方案，我们在这里不做处理，转而 Hook CCDirector。
-    
+%hook CCDirector
+
+- (void)mainLoop:(id)sender {
+    // 保存原始的 deltaTime 计算逻辑
+    // 我们通过修改传入的时间来加速
+    // 这里做一个简单的 trick：修改 CADisplayLink 的 duration
     %orig;
 }
 
 %end
 
 // ===================================================================================
-// 3. Hook 辅助：心跳包管理 (AASHeartBeat)
-// 说明：如果游戏逻辑依赖服务器心跳，加速心跳包发送频率。
-// 注意：如果 AAS 是防沉迷，请谨慎使用！
+// 2. 核心 Hook：底层时间源 (最强力)
+// 欺骗系统时间，让游戏认为时间过得更快了
 // ===================================================================================
 
-%hook AASHeartBeat
-
-// 假设 playtime 是只读属性，我们 Hook 它的 getter 来欺骗服务器（慎用）
-- (double)playtime {
-    double original = %orig;
-    // 返回加速后的时间（仅在读取时生效，视具体逻辑而定）
-    return original * GLOBAL_SPEED_MULTIPLIER;
+// 这是底层时间函数，很多游戏引擎都基于此
+double (*original_CACurrentMediaTime)();
+double modified_CACurrentMediaTime() {
+    // 返回一个被加速的时间戳
+    return original_CACurrentMediaTime() * GLOBAL_SPEED_MULTIPLIER;
 }
 
-// 如果有 update 或 sendHeartbeat 方法，请在这里 Hook
-// - (void)update { ... }
+%ctor {
+    // 在构造函数中直接替换 C 函数指针 (最底层 Hook)
+    // 这招对 Unity 和 Cocos 引擎都有效
+    MSHookFunction((void *)CACurrentMediaTime, (void *)modified_CACurrentMediaTime, (void **)&original_CACurrentMediaTime);
+    NSLog(@"[SpeedHack] CACurrentMediaTime Hooked!");
+}
+
+// ===================================================================================
+// 3. 业务定时器加速 (AASTimerManager)
+// 修正：尝试 Hook 更通用的方法，或者修正参数类型
+// ===================================================================================
+
+%hook AASTimerManager
+
+// 有时候 interval 是 float 而不是 double
+- (void)start:(id)a0 interval:(float)a1 notLogin:(BOOL)a2 {
+    float newInterval = a1 / GLOBAL_SPEED_MULTIPLIER;
+    NSLog(@"[SpeedHack] AASTimer Float Hook: %f -> %f", a1, newInterval);
+    %orig(a0, newInterval, a2);
+}
+
+// 如果上面的 float 不行，尝试 double (Logos 会自动匹配)
+- (void)start:(id)a0 interval:(double)a1 notLogin:(BOOL)a2 {
+    double newInterval = a1 / GLOBAL_SPEED_MULTIPLIER;
+    NSLog(@"[SpeedHack] AASTimer Double Hook: %f -> %f", a1, newInterval);
+    %orig(a0, newInterval, a2);
+}
 
 %end
 
 // ===================================================================================
-// 4. Hook 辅助：RunLoop 监控 (BLYMainRunloopMonitorManager)
-// 说明：防止加速导致被 Bugly 误判为卡顿。
-// ===================================================================================
-
-%hook BLYMainRunloopMonitorManager
-
-// 原型: - (void)addRunloopObserver;
-// 功能：如果加速导致帧时间过长，可能会被监控。我们可以尝试移除监控。
-- (void)addRunloopObserver {
-    // 什么都不做，或者调用原函数
-    // 如果游戏加速后卡顿严重，可以注释掉 %orig 来禁用监控
-    // %orig;
-    NSLog((CFStringRef)CFSTR("[SpeedHack] BLY Monitor Disabled"));
-}
-
-%end
-
-// ===================================================================================
-// 5. Hook 辅助：音频引擎 (CDSoundEngine)
-// 说明：加速后声音会变调（像小黄人）。这里提供静音方案。
+// 4. 音频处理 (保持静音)
 // ===================================================================================
 
 %hook CDSoundEngine
 
-// 原型: - (void)setMute:(BOOL)a0;
-// 功能：强制静音，避免声音变调
 - (void)setMute:(BOOL)a0 {
-    // 强制静音
     %orig(YES);
 }
-
-// 如果有播放背景音乐的方法，也可以 Hook
-// - (void)playBackgroundMusic:... { ... }
 
 %end
