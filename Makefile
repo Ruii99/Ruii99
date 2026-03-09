@@ -46,7 +46,7 @@ include $(THEOS)/makefiles/common.mk
 # ██████████████████████████████████████████████████████████████████
 # 修改点 2: 修改 Tweak 名称
 # 这里的名称必须和你创建的 .xm 文件前缀一致
-TWEAK_NAME = xiamu
+TWEAK_NAME = Tweak
 
 # 修改点 3: 指定源文件
 # 假设你的 Hook 代码写在 Tweak.xm 中
