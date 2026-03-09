@@ -12,21 +12,30 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest  # 建议使用 macos 运行环境，编译 iOS 插件更稳定
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Theos
-        uses: kabiroberai/install-theos-action@v1
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          git clone --recursive https://github.com/theos/theos.git ~/theos
+          echo "THEOS=~/theos" >> $GITHUB_ENV
+          echo "~/theos/bin" >> $GITHUB_PATH
+
+      - name: Setup SDK
+        run: |
+          git clone https://github.com/theos/sdks.git ~/theos/sdks
 
       - name: Build Package
         run: |
-          # 使用 Makefile 里的 SCHEME 逻辑
+          # 清理并根据输入的参数进行编译
+          make clean
           make package SCHEME=${{ github.event.inputs.scheme || 'rootless' }} FINALPACKAGE=1
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # 已更新为 v4 版本
         with:
-          name: Tweak-Deb
+          name: Tweak-Deb-${{ github.event.inputs.scheme || 'rootless' }}
           path: packages/*.deb
