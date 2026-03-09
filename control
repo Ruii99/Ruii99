@@ -1,0 +1,10 @@
+Package: com.yourname.gamespeedhack
+Name: Game Speed Hack
+Version: 1.0
+Architecture: iphoneos-arm
+Description: Accelerate game speed by modifying timers.
+Maintainer: Your Name
+Author: Your Name
+Section: Tweaks
+Depends: mobilesubstrate
+Homepage: https://yourwebsite.com
