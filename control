@@ -3,7 +3,7 @@ Name: GameSpeedHack
 Depends: mobilesubstrate
 Version: 1.0.0
 Architecture: iphoneos-arm
-Description: A speed hack for Cocos2d-x games.
+Description: 游戏倍速插件
 Maintainer: YourName
 Author: YourName
 Section: Tweaks
