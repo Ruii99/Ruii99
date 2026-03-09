@@ -1,48 +1,14 @@
-name: Build Tweak
-
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-    inputs:
-      scheme:
-        description: '选择打包架构 (rootless, roothide, rootful)'
-        required: true
-        default: 'rootless'
-
-jobs:
-  build:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Setup Theos
         run: |
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-          # 如果目录已存在则先删除，防止 128 错误
           rm -rf ~/theos
-          # 使用 --depth 1 快速克隆
           git clone --depth 1 --recursive https://github.com/theos/theos.git ~/theos
           echo "THEOS=~/theos" >> $GITHUB_ENV
           echo "~/theos/bin" >> $GITHUB_PATH
 
-      - name: Setup SDK
+      # 插入下面这个步骤来修复 ldid 缺失问题
+      - name: Install ldid
         run: |
-          rm -rf ~/theos/sdks
-          # 克隆 SDKs 到指定目录
-          git clone --depth 1 https://github.com/theos/sdks.git ~/theos/sdks
-
-      - name: Build Package
-        run: |
-          # 确保权限正确
-          chmod +x ~/theos/bin/*
-          make clean
-          # 这里的 TWEAK_NAME 建议与 Makefile 保持一致
-          make package SCHEME=${{ github.event.inputs.scheme || 'rootless' }} FINALPACKAGE=1
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Tweak-Deb-${{ github.event.inputs.scheme || 'rootless' }}
-          path: packages/*.deb
+          brew install ldid
+          # 确保 Theos 能找到它（有时候 brew 安装路径需要手动链接或确认）
+          which ldid
