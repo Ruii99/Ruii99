@@ -1,40 +1,32 @@
-name: Build Theos Tweak
+name: Build Tweak
 
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
+    inputs:
+      scheme:
+        description: '选择打包架构 (rootless, roothide, rootful)'
+        required: true
+        default: 'rootless'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y fakeroot git perl build-essential libzip-dev libplist-dev
-
-      - name: Install Theos
-        run: |
-          git clone --recursive https://github.com/theos/theos.git ~/theos
-          curl -L https://github.com/theos/sdks/releases/download/2025.09/iPhoneOS17.0.sdk.tar.xz | tar -xJ -C ~/theos/sdks
+      - name: Setup Theos
+        uses: kabiroberai/install-theos-action@v1
 
       - name: Build Package
         run: |
-          export THEOS=~/theos
-          export PATH=$THEOS/bin:$PATH
-          make clean
-          make package FINALPACKAGE=1
-        env:
-          THEOS: ~/theos
+          # 使用 Makefile 里的 SCHEME 逻辑
+          make package SCHEME=${{ github.event.inputs.scheme || 'rootless' }} FINALPACKAGE=1
 
-      - name: Upload deb
-        uses: actions/upload-artifact@v4
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
         with:
-          name: Packages
+          name: Tweak-Deb
           path: packages/*.deb
